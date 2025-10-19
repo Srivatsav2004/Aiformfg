@@ -44,12 +44,17 @@ except Exception as e:
     st.stop()
 
 # ==========================================================
-#  FEATURE LIST (DL)
+#  FEATURE LISTS
 # ==========================================================
 dl_features = [
     "unit_ID", "cycles", "setting_1", "setting_2", "setting_3", "T2", "T24", "T30", "T50",
     "P2", "P15", "P30", "Nf", "Nc", "Ps30", "phi", "NRf", "NRc", "BPR", "farB",
     "htBleed", "Nf_dmd", "PCNfR_dmd", "W31", "W32"
+]
+
+ml_features = [
+    'cycle_time', 'T24', 'T30', 'T50', 'P30', 'Nf',
+    'Nc', 'Ps30', 'phi', 'NRf', 'BPR', 'htBleed', 'W31', 'W32'
 ]
 
 # ==========================================================
@@ -81,6 +86,7 @@ prefilled_row = {
     "PCNfR_dmd": 0.9,
     "W31": 150.0,
     "W32": 140.0,
+    "cycle_time": 1  # Added for ML feature
 }
 
 # ==========================================================
@@ -91,7 +97,7 @@ st.sidebar.markdown("Adjust the values below if needed:")
 
 with st.sidebar.form("input_form"):
     user_inputs = {}
-    for feature in dl_features:
+    for feature in dl_features + ['cycle_time']:
         user_inputs[feature] = st.number_input(
             feature,
             value=float(prefilled_row.get(feature, 0.0)),
@@ -105,7 +111,7 @@ with st.sidebar.form("input_form"):
 # ==========================================================
 if submitted:
     try:
-        # Convert input to numpy
+        # DL model input
         input_array = np.array([[user_inputs[f] for f in dl_features]], dtype=float)
 
         # Adjust input shape for DL model if needed
@@ -115,16 +121,18 @@ if submitted:
             features_per_step = expected_shape[2]
             input_array = np.resize(input_array, (1, time_steps, features_per_step))
 
-        # Run predictions
         dl_pred = float(dl_model.predict(input_array, verbose=0)[0][0])
-        ml_input = np.array([[user_inputs.get(f, 0) for f in dl_features if f in prefilled_row]], dtype=float)
+
+        # ML model input
+        ml_input = np.array([[user_inputs[f] for f in ml_features]], dtype=float)
         ml_pred = float(ml_model.predict(ml_input)[0])
 
+        # Weighted final prediction
         final_pred = (dl_pred * weight_dl) + (ml_pred * weight_ml)
 
-        # ======================================================
-        #  RESULTS
-        # ======================================================
+        # =============================
+        # Display results
+        # =============================
         st.subheader("📊 Prediction Results")
         col1, col2, col3 = st.columns(3)
         col1.metric("Deep Learning Prediction", round(dl_pred, 4))
@@ -133,9 +141,9 @@ if submitted:
 
         st.success("✅ Prediction successful!")
 
-        # ======================================================
-        #  VISUALIZATIONS
-        # ======================================================
+        # =============================
+        # Visualizations
+        # =============================
         st.markdown("### 📈 Model Comparison")
         fig, ax = plt.subplots()
         models = ["Deep Learning", "Machine Learning", "Weighted Final"]
@@ -154,7 +162,6 @@ if submitted:
         ax2.pie(weights, labels=labels, autopct='%1.1f%%', startangle=90)
         st.pyplot(fig2)
 
-        # Input summary
         st.markdown("### 🧾 Input Summary")
         st.dataframe({
             "Feature": list(user_inputs.keys()),
