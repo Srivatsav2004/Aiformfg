@@ -15,7 +15,7 @@ st.set_page_config(
     layout="wide"
 )
 
-st.title("⚙️ AI FormFG — Engine Health & Failure Prediction Dashboard")
+st.title("⚙️ AI For MFG — Engine Health & Failure Prediction Dashboard")
 st.markdown(
     "This web app compares **Deep Learning** and **Machine Learning** models "
     "for predicting engine health based on input parameters."
@@ -152,4 +152,4 @@ if submitted:
 #  FOOTER
 # ==========================================================
 st.markdown("---")
-st.caption("Made with ❤️ using Streamlit | AI FormFG 2025 | All rights reserved")
+st.caption("AI For MFG 2025 | All rights reserved")
