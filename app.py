@@ -73,27 +73,50 @@ if submitted:
         # Prepare ML input (only subset)
         ml_input = np.array([[user_inputs.get(f, 0) for f in ml_features]], dtype=float)
 
+        # ---------------------------
+        # Handle DL Model Input Shape
+        # ---------------------------
+        expected_shape = dl_model.input_shape  # e.g. (None, 30, 14)
+        st.write("🧩 DL Model Expected Input Shape:", expected_shape)
+
+        if len(expected_shape) == 3:
+            # e.g. reshape (1, 26) → (1, 30, 14)
+            time_steps = expected_shape[1]
+            features_per_step = expected_shape[2]
+
+            # Create a padded or repeated array to match shape
+            dl_input = np.resize(dl_input, (1, time_steps, features_per_step))
+
         # Run predictions
-        dl_pred = float(dl_model.predict(dl_input)[0])
+        dl_pred = float(dl_model.predict(dl_input, verbose=0)[0][0])
         ml_pred = float(ml_model.predict(ml_input)[0])
 
-        # Compute final weighted accuracy
+        # Compute final weighted prediction
         total = acc1 + acc2
         weight_dl = acc1 / total
         weight_ml = acc2 / total
         final_pred = (dl_pred * weight_dl) + (ml_pred * weight_ml)
 
-        # ======================================================
+        # ===============================
         #  DISPLAY RESULTS
-        # ======================================================
+        # ===============================
         st.subheader("📊 Prediction Results")
-
         col1, col2, col3 = st.columns(3)
         col1.metric("Deep Learning Prediction", round(dl_pred, 4))
         col2.metric("ML (LightGBM) Prediction", round(ml_pred, 4))
         col3.metric("Weighted Final Prediction", round(final_pred, 4))
-
         st.success("✅ Prediction completed successfully!")
+
+        # Charts below
+        st.markdown("### 📈 Model Comparison")
+        fig, ax = plt.subplots()
+        models = ["Deep Learning", "ML Model", "Weighted Final"]
+        values = [dl_pred, ml_pred, final_pred]
+        ax.bar(models, values, color=["#2E86DE", "#F39C12", "#27AE60"])
+        st.pyplot(fig)
+
+    except Exception as e:
+        st.error(f"⚠️ Prediction failed: {e}")
 
         # ======================================================
         #  VISUALIZATIONS
