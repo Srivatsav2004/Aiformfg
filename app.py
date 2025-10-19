@@ -14,9 +14,9 @@ st.title("🔧 AI FormFG — Engine Failure Prediction System")
 # LOAD MODELS
 # ----------------------------
 try:
-    with open("ml_model.pkl", "rb") as f:
+    with open("model/ml_model.pkl", "rb") as f:
         ml_model = pickle.load(f)
-    dl_model = load_model("dl_model.keras")
+    dl_model = load_model("model/dl_model.keras")
     st.sidebar.success("✅ Models loaded successfully!")
 except Exception as e:
     st.error(f"❌ Error loading models: {e}")
