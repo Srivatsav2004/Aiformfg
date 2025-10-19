@@ -2,7 +2,6 @@ import streamlit as st
 import numpy as np
 import pickle
 import tensorflow as tf
-from tensorflow.keras.models import load_model
 import matplotlib.pyplot as plt
 import os
 
@@ -10,16 +9,26 @@ import os
 #  PAGE CONFIG
 # ==========================================================
 st.set_page_config(
-    page_title="AI For MFG | Engine Health Prediction",
+    page_title="AI FormFG | Engine Health Prediction",
     page_icon="⚙️",
     layout="wide"
 )
 
-st.title("⚙️ AI For MFG — Engine Health & Failure Prediction Dashboard")
+st.title("⚙️ AI FormFG — Engine Health & Failure Prediction Dashboard")
 st.markdown(
-    "This web app compares **Deep Learning** and **Machine Learning** models "
-    "for predicting engine health based on input parameters."
+    "This app predicts engine health metrics using both Deep Learning and Machine Learning models."
 )
+
+# ==========================================================
+#  FIXED RMSE VALUES
+# ==========================================================
+DL_RMSE = 17.70599
+ML_RMSE = 51.072
+
+inv_dl = 1 / DL_RMSE
+inv_ml = 1 / ML_RMSE
+weight_dl = inv_dl / (inv_dl + inv_ml)
+weight_ml = inv_ml / (inv_dl + inv_ml)
 
 # ==========================================================
 #  LOAD MODELS
@@ -29,37 +38,66 @@ try:
         ml_model = pickle.load(f)
     with open(os.path.join("model", "dl_model.pkl"), "rb") as f:
         dl_model = pickle.load(f)
-    st.sidebar.success("✅ Both models loaded successfully!")
+    st.sidebar.success("✅ Models loaded successfully!")
 except Exception as e:
     st.error(f"❌ Model loading failed: {e}")
     st.stop()
 
 # ==========================================================
-#  FEATURE LISTS
+#  FEATURE LIST (DL)
 # ==========================================================
 dl_features = [
-    "T2", "T24", "T30", "T50", "P2", "P15", "P30", "Nf", "Nc", "Ps30", "phi",
-    "NRf", "NRc", "BPR", "farB", "htBleed", "Nf_dmd", "PCNfR_dmd",
-    "W31", "W32", "T48", "SmFan", "SmLPC", "SmHPC", "X_cycles", "σ (sigma)"
-]
-
-ml_features = [
-    'cycle_time', 'T24', 'T30', 'T50', 'P30', 'Nf',
-    'Nc', 'Ps30', 'phi', 'NRf', 'BPR', 'htBleed', 'W31', 'W32'
+    "unit_ID", "cycles", "setting_1", "setting_2", "setting_3", "T2", "T24", "T30", "T50",
+    "P2", "P15", "P30", "Nf", "Nc", "Ps30", "phi", "NRf", "NRc", "BPR", "farB",
+    "htBleed", "Nf_dmd", "PCNfR_dmd", "W31", "W32"
 ]
 
 # ==========================================================
-#  SIDEBAR INPUTS
+#  PREFILLED SAMPLE ROW
+# ==========================================================
+prefilled_row = {
+    "unit_ID": 1,
+    "cycles": 1,
+    "setting_1": -0.0007,
+    "setting_2": -0.0004,
+    "setting_3": 100.0,
+    "T2": 518.67,
+    "T24": 641.82,
+    "T30": 1589.70,
+    "T50": 1400.60,
+    "P2": 14.62,
+    "P15": 21.61,
+    "P30": 556.24,
+    "Nf": 2388.00,
+    "Nc": 8138.62,
+    "Ps30": 8.4195,
+    "phi": 0.03,
+    "NRf": 392.0,
+    "NRc": 2388.0,
+    "BPR": 100.0,
+    "farB": 39.06,
+    "htBleed": 23.4190,
+    "Nf_dmd": 7000.0,
+    "PCNfR_dmd": 0.9,
+    "W31": 150.0,
+    "W32": 140.0,
+}
+
+# ==========================================================
+#  SIDEBAR INPUT FORM
 # ==========================================================
 st.sidebar.header("📥 Input Engine Parameters")
-st.sidebar.markdown("Enter the values for each feature:")
+st.sidebar.markdown("Adjust the values below if needed:")
 
 with st.sidebar.form("input_form"):
     user_inputs = {}
-    for f in dl_features:
-        user_inputs[f] = st.number_input(f, value=0.0, step=0.01, format="%.4f")
-    acc1 = st.number_input("DL Model Accuracy (acc1)", value=0.85, step=0.01)
-    acc2 = st.number_input("ML Model Accuracy (acc2)", value=0.80, step=0.01)
+    for feature in dl_features:
+        user_inputs[feature] = st.number_input(
+            feature,
+            value=float(prefilled_row.get(feature, 0.0)),
+            step=0.1,
+            format="%.4f"
+        )
     submitted = st.form_submit_button("🚀 Run Predictions")
 
 # ==========================================================
@@ -67,78 +105,56 @@ with st.sidebar.form("input_form"):
 # ==========================================================
 if submitted:
     try:
-        # Prepare DL input (all features)
-        dl_input = np.array([[user_inputs[f] for f in dl_features]], dtype=float)
+        # Convert input to numpy
+        input_array = np.array([[user_inputs[f] for f in dl_features]], dtype=float)
 
-        # Prepare ML input (only subset)
-        ml_input = np.array([[user_inputs.get(f, 0) for f in ml_features]], dtype=float)
-
-        # ---------------------------
-        # Handle DL Model Input Shape
-        # ---------------------------
-        expected_shape = dl_model.input_shape  # e.g. (None, 30, 14)
-        st.write("🧩 DL Model Expected Input Shape:", expected_shape)
-
+        # Adjust input shape for DL model if needed
+        expected_shape = dl_model.input_shape
         if len(expected_shape) == 3:
-            # e.g. reshape (1, 26) → (1, 30, 14)
             time_steps = expected_shape[1]
             features_per_step = expected_shape[2]
-
-            # Create a padded or repeated array to match shape
-            dl_input = np.resize(dl_input, (1, time_steps, features_per_step))
+            input_array = np.resize(input_array, (1, time_steps, features_per_step))
 
         # Run predictions
-        dl_pred = float(dl_model.predict(dl_input, verbose=0)[0][0])
+        dl_pred = float(dl_model.predict(input_array, verbose=0)[0][0])
+        ml_input = np.array([[user_inputs.get(f, 0) for f in dl_features if f in prefilled_row]], dtype=float)
         ml_pred = float(ml_model.predict(ml_input)[0])
 
-        # Compute final weighted prediction
-        total = acc1 + acc2
-        weight_dl = acc1 / total
-        weight_ml = acc2 / total
         final_pred = (dl_pred * weight_dl) + (ml_pred * weight_ml)
 
-        # ===============================
-        #  DISPLAY RESULTS
-        # ===============================
+        # ======================================================
+        #  RESULTS
+        # ======================================================
         st.subheader("📊 Prediction Results")
         col1, col2, col3 = st.columns(3)
         col1.metric("Deep Learning Prediction", round(dl_pred, 4))
-        col2.metric("ML (LightGBM) Prediction", round(ml_pred, 4))
+        col2.metric("Machine Learning Prediction", round(ml_pred, 4))
         col3.metric("Weighted Final Prediction", round(final_pred, 4))
-        st.success("✅ Prediction completed successfully!")
 
-        # Charts below
-        st.markdown("### 📈 Model Comparison")
-        fig, ax = plt.subplots()
-        models = ["Deep Learning", "ML Model", "Weighted Final"]
-        values = [dl_pred, ml_pred, final_pred]
-        ax.bar(models, values, color=["#2E86DE", "#F39C12", "#27AE60"])
-        st.pyplot(fig)
-
-    except Exception as e:
-        st.error(f"⚠️ Prediction failed: {e}")
+        st.success("✅ Prediction successful!")
 
         # ======================================================
         #  VISUALIZATIONS
         # ======================================================
-        st.markdown("### 📈 Model Output Comparison")
-
+        st.markdown("### 📈 Model Comparison")
         fig, ax = plt.subplots()
-        models = ["Deep Learning", "ML Model", "Weighted Final"]
+        models = ["Deep Learning", "Machine Learning", "Weighted Final"]
         values = [dl_pred, ml_pred, final_pred]
         ax.bar(models, values, color=["#2E86DE", "#F39C12", "#27AE60"])
         ax.set_ylabel("Prediction Value")
-        ax.set_title("Model Prediction Comparison")
         st.pyplot(fig)
 
-        st.markdown("### ⚖️ Accuracy Weight Distribution")
+        st.markdown("### ⚖️ RMSE Weight Distribution")
         fig2, ax2 = plt.subplots()
         weights = [weight_dl, weight_ml]
-        labels = ["DL Model Weight", "ML Model Weight"]
+        labels = [
+            f"DL Model (RMSE={DL_RMSE:.2f})",
+            f"ML Model (RMSE={ML_RMSE:.2f})"
+        ]
         ax2.pie(weights, labels=labels, autopct='%1.1f%%', startangle=90)
-        ax2.axis('equal')
         st.pyplot(fig2)
 
+        # Input summary
         st.markdown("### 🧾 Input Summary")
         st.dataframe({
             "Feature": list(user_inputs.keys()),
@@ -152,4 +168,4 @@ if submitted:
 #  FOOTER
 # ==========================================================
 st.markdown("---")
-st.caption("AI For MFG 2025 | All rights reserved")
+st.caption("Made with ❤️ | AI FormFG | RMSE-weighted prediction system")
