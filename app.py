@@ -9,12 +9,12 @@ import os
 #  PAGE CONFIG
 # ==========================================================
 st.set_page_config(
-    page_title="AI FormFG | Engine Health Prediction",
+    page_title="AI For MFG | Engine Health Prediction",
     page_icon="⚙️",
     layout="wide"
 )
 
-st.title("⚙️ AI FormFG — Engine Health & Failure Prediction Dashboard")
+st.title("⚙️ AI For MFG — Engine Health & Failure Prediction Dashboard")
 st.markdown(
     "This app predicts engine health metrics using both Deep Learning and Machine Learning models."
 )
@@ -175,4 +175,4 @@ if submitted:
 #  FOOTER
 # ==========================================================
 st.markdown("---")
-st.caption("Made with ❤️ | AI FormFG | RMSE-weighted prediction system")
+st.caption("AI For MFG | RMSE-weighted prediction system")
