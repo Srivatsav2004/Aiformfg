@@ -13,10 +13,10 @@ st.sidebar.title("⚙️ Model Parameters")
 st.sidebar.write("Provide the required input values for predictions below.")
 
 # --- LOAD MODELS ---
-with open("models/dl_model.pkl", "rb") as f:
+with open("model/dl_model.pkl", "rb") as f:
     dl_model = pickle.load(f)
 
-with open("models/ml_model.pkl", "rb") as f:
+with open("model/ml_model.pkl", "rb") as f:
     ml_model = pickle.load(f)
 
 # --- INPUT FIELDS ---
