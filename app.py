@@ -23,7 +23,7 @@ st.markdown(
 #  FIXED RMSE VALUES
 # ==========================================================
 DL_RMSE = 17.70599
-ML_RMSE = 51.072
+ML_RMSE = 16.21
 
 inv_dl = 1 / DL_RMSE
 inv_ml = 1 / ML_RMSE
