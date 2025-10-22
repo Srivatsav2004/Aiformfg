@@ -22,7 +22,7 @@ st.markdown(
 # ==========================================================
 #  FIXED RMSE VALUES
 # ==========================================================
-DL_RMSE = 17.70599
+DL_RMSE = 15.3
 ML_RMSE = 16.21
 
 inv_dl = 1 / DL_RMSE
@@ -36,7 +36,7 @@ weight_ml = inv_ml / (inv_dl + inv_ml)
 try:
     with open(os.path.join("model", "ml_model.pkl"), "rb") as f:
         ml_model = pickle.load(f)
-    with open(os.path.join("model", "dl_model.pkl"), "rb") as f:
+    with open(os.path.join("model", "dl_model2.pkl"), "rb") as f:
         dl_model = pickle.load(f)
     st.sidebar.success("✅ Models loaded successfully!")
 except Exception as e:
