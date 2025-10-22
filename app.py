@@ -16,7 +16,7 @@ st.set_page_config(
 
 st.title("⚙️ AI For MFG — Engine Health & Failure Prediction Dashboard")
 st.markdown(
-    "This app predicts engine health metrics using both Deep Learning and Machine Learning models."
+    "This app predicts engine health metrics using a hybrid RMSE-weighted approach combining Deep Learning and Machine Learning models."
 )
 
 # ==========================================================
@@ -104,7 +104,7 @@ with st.sidebar.form("input_form"):
             step=0.1,
             format="%.4f"
         )
-    submitted = st.form_submit_button("🚀 Run Predictions")
+    submitted = st.form_submit_button("🚀 Run Prediction")
 
 # ==========================================================
 #  PREDICTION LOGIC
@@ -114,7 +114,6 @@ if submitted:
         # DL model input
         input_array = np.array([[user_inputs[f] for f in dl_features]], dtype=float)
 
-        # Adjust input shape for DL model if needed
         expected_shape = dl_model.input_shape
         if len(expected_shape) == 3:
             time_steps = expected_shape[1]
@@ -131,27 +130,15 @@ if submitted:
         final_pred = (dl_pred * weight_dl) + (ml_pred * weight_ml)
 
         # =============================
-        # Display results
+        # Display results (only final)
         # =============================
-        st.subheader("📊 Prediction Results")
-        col1, col2, col3 = st.columns(3)
-        col1.metric("Deep Learning Prediction", round(dl_pred, 4))
-        col2.metric("Machine Learning Prediction", round(ml_pred, 4))
-        col3.metric("Weighted Final Prediction", round(final_pred, 4))
-
+        st.subheader("📊 Final Engine Health Prediction")
+        st.metric("Weighted Final Prediction", round(final_pred, 4))
         st.success("✅ Prediction successful!")
 
         # =============================
-        # Visualizations
+        # RMSE Weight Visualization
         # =============================
-        st.markdown("### 📈 Model Comparison")
-        fig, ax = plt.subplots()
-        models = ["Deep Learning", "Machine Learning", "Weighted Final"]
-        values = [dl_pred, ml_pred, final_pred]
-        ax.bar(models, values, color=["#2E86DE", "#F39C12", "#27AE60"])
-        ax.set_ylabel("Prediction Value")
-        st.pyplot(fig)
-
         st.markdown("### ⚖️ RMSE Weight Distribution")
         fig2, ax2 = plt.subplots()
         weights = [weight_dl, weight_ml]
@@ -162,6 +149,9 @@ if submitted:
         ax2.pie(weights, labels=labels, autopct='%1.1f%%', startangle=90)
         st.pyplot(fig2)
 
+        # =============================
+        # Input Summary
+        # =============================
         st.markdown("### 🧾 Input Summary")
         st.dataframe({
             "Feature": list(user_inputs.keys()),
